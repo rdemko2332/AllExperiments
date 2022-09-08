@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-bcftools consensus \
-  -I \
-  -f genome_masked.fa varscan.concat.vcf.gz > cons.fa
+bcftools merge \
+      -o merged.vcf.gz \
+      -O z *.vcf.gz
+cp merged.vcf.gz toFix.vcf.gz
+gunzip toFix.vcf.gz
