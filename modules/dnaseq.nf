@@ -46,19 +46,24 @@ process mergeVcfs {
 
 process snpEff {
   container = "dnaseq"
-  publishDir "$params.outputDir", mode: "copy"
+   publishDir "$params.outputDir", mode: "copy"
   input:
     path 'merged.vcf'
+    path 'genes.gtf.gz'
+    path 'sequences.fa.gz'
   output:
     path 'merged.ann.vcf'
   script:
     """
-    cp /usr/bin/snpEff.config .
-    perl /usr/bin/fixSeqId.pl -i merged.vcf -o fixed.vcf -d data.txt 
-    java -Xmx4g -jar /usr/bin/snpEff.jar Leishmania_major fixed.vcf > numSeqId.ann.vcf
-    perl /usr/bin/replaceSeqId.pl -i numSeqId.ann.vcf -o merged.ann.vcf -d data.txt
-    """
+    mkdir genome
+    mv genes.gtf.gz genome
+    mv sequences.fa.gz genome
+    cp /usr/bin/snpEff/snpEff.config .
+    java -jar /usr/bin/snpEff/snpEff.jar build -gtf22 -noCheckCds -noCheckProtein -v genome
+    java -Xmx4g -jar /usr/bin/snpEff/snpEff.jar genome merged.vcf > merged.ann.vcf    
+    """ 
 }
+
 
 workflow dnaseq {
 
@@ -76,5 +81,5 @@ workflow dnaseq {
     allvcfs = vcfs_qch.collect()
     allvcfindexes = vcfsindex_qch.collect()
     mergeVcfsResults = mergeVcfs(allvcfs, allvcfindexes)
-    snpEff(mergeVcfsResults[1])
+    snpEff(mergeVcfsResults[1], params.gtfFile, params.sequenceFile)
 }
