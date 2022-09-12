@@ -59,7 +59,13 @@ process snpEff {
     mv genes.gtf.gz genome
     mv sequences.fa.gz genome
     cp /usr/bin/snpEff/snpEff.config .
-    java -jar /usr/bin/snpEff/snpEff.jar build -gtf22 -noCheckCds -noCheckProtein -v genome
+    if [ $params.databaseFileType = gtf ]; then
+      java -jar /usr/bin/snpEff/snpEff.jar build -gtf22 -noCheckCds -noCheckProtein -v genome
+    elif [ $params.databaseFileType = gff ]; then
+      java -jar /usr/bin/snpEff/snpEff.jar build -gff3 -noCheckCds -noCheckProtein -v genome
+    else
+      echo "Params.databaseFileType is not gtf or gff"
+    fi
     java -Xmx4g -jar /usr/bin/snpEff/snpEff.jar genome merged.vcf > merged.ann.vcf    
     """ 
 }
@@ -81,5 +87,5 @@ workflow dnaseq {
     allvcfs = vcfs_qch.collect()
     allvcfindexes = vcfsindex_qch.collect()
     mergeVcfsResults = mergeVcfs(allvcfs, allvcfindexes)
-    snpEff(mergeVcfsResults[1], params.gtfFile, params.sequenceFile)
+    snpEff(mergeVcfsResults[1], params.databaseFile, params.sequenceFile)
 }
