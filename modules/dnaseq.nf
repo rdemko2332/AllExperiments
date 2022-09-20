@@ -18,56 +18,56 @@ process checkUniqueIds {
 
 process makeIndex {
   container = 'veupathdb/dnaseqanalysis'
-  publishDir "$params.outputDir", mode: "copy", saveAs: { filename -> "combinedIndexedConsensus.fa.fai" }
+
+  publishDir "$params.outputDir", mode: "copy", pattern: 'combinedFasta.fa.fai'
+  publishDir "$params.outputDir", mode: "copy", pattern: 'combinedFasta.fa'
 
   input:
     path ('combinedFasta.fa')
     path 'check.txt'
 
   output:
-    path('combinedFasta.fa.fai') 
+    path('combinedFasta.fa.fai')
+    path('combinedFasta.fa') 
 
   script:
     template 'makeIndex.bash'
 }
 
+
 process mergeVcfs {
   container = 'biocontainers/bcftools:v1.9-1-deb_cv1'
+
   publishDir "$params.outputDir", mode: "copy", pattern: 'merged.vcf.gz'
+
   input:
     path '*.vcf.gz'
     path '*.vcf.gz.tbi'
+
   output:
     path 'merged.vcf.gz'
     path 'toSnpEff.vcf'
+
   script:
     template 'mergeVcfs.bash'
 }
 
+
 process snpEff {
   container = "dnaseq"
-   publishDir "$params.outputDir", mode: "copy"
+
+  publishDir "$params.outputDir", mode: "copy"
+
   input:
     path 'merged.vcf'
     path 'genes.gtf.gz'
     path 'sequences.fa.gz'
+
   output:
     path 'merged.ann.vcf'
+
   script:
-    """
-    mkdir genome
-    mv genes.gtf.gz genome
-    mv sequences.fa.gz genome
-    cp /usr/bin/snpEff/snpEff.config .
-    if [ $params.databaseFileType = gtf ]; then
-      java -jar /usr/bin/snpEff/snpEff.jar build -gtf22 -noCheckCds -noCheckProtein -v genome
-    elif [ $params.databaseFileType = gff ]; then
-      java -jar /usr/bin/snpEff/snpEff.jar build -gff3 -noCheckCds -noCheckProtein -v genome
-    else
-      echo "Params.databaseFileType is not gtf or gff"
-    fi
-    java -Xmx4g -jar /usr/bin/snpEff/snpEff.jar genome merged.vcf > merged.ann.vcf    
-    """ 
+    template 'snpEff.bash'    
 }
 
 
@@ -79,11 +79,9 @@ workflow dnaseq {
     vcfsindex_qch
 
   main:
-
     checkResults = checkUniqueIds(params.fastaDir)
     combinedFasta = fastas_qch.collectFile(name: 'CombinedFasta.fa')
     makeIndex(combinedFasta, checkResults)
-
     allvcfs = vcfs_qch.collect()
     allvcfindexes = vcfsindex_qch.collect()
     mergeVcfsResults = mergeVcfs(allvcfs, allvcfindexes)
