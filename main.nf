@@ -24,7 +24,7 @@ else {
 // Includes
 //---------------------------------------------------------------
 
-include { dnaseq } from './modules/dnaseq.nf'
+include { AllExperiments } from './modules/AllExperiments.nf'
 
 //---------------------------------------------------------------
 // Main Workflow
@@ -32,6 +32,6 @@ include { dnaseq } from './modules/dnaseq.nf'
 
 workflow {
 
-  dnaseq(fastas_qch, vcfs_qch, vcfsindex_qch)
+  AllExperiments(fastas_qch, vcfs_qch, vcfsindex_qch)
 
 }
