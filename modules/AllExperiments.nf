@@ -2,6 +2,20 @@
 nextflow.enable.dsl=2
 
 
+process checkUniqueIds {
+
+  input:
+    path params.fastaDir
+
+  output:
+    path 'check.txt'
+
+  script:
+    template 'checkUniqueIds.bash'
+}
+
+
+
 process generateRegion {
 
   input:
@@ -102,6 +116,7 @@ process makeIndex {
 
   input:
     path ('combinedFasta.fa')
+    path 'check.txt'
 
   output:
     path('combinedFasta.fa.fai')
@@ -130,6 +145,23 @@ process mergeVcfs {
 }
 
 
+process snpEff {
+
+  publishDir "$params.outputDir", mode: "copy"
+
+  input:
+    path 'merged.vcf'
+    path 'genes.gtf.gz'
+    path 'sequences.fa.gz'
+
+  output:
+    path 'merged.ann.vcf'
+
+  script:
+    template 'snpEff.bash'    
+}
+
+
 workflow AllExperiments {
 
   take:
@@ -138,12 +170,14 @@ workflow AllExperiments {
     vcfsindex_qch
     
   main:
- 
+    
+    checkResults = checkUniqueIds(params.fastaDir) 
     generateRegion(params.makepositionarraycoding, fastas_qch) | runSamtools | collectFile(storeDir: params.outputDir, name: 'transcriptFinal.fa', newLine: true)
     combinedFasta = fastas_qch.collectFile(name: 'CombinedFasta.fa')
-    makeIndex(combinedFasta)
+    makeIndex(combinedFasta, checkResults)
     allvcfs = vcfs_qch.collect()
     allvcfindexes = vcfsindex_qch.collect()
     mergeVcfsResults = mergeVcfs(allvcfs, allvcfindexes)
+    snpEff(mergeVcfsResults[1], params.databaseFile, params.sequenceFile)
 
 }
